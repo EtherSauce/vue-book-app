@@ -1,14 +1,18 @@
 <script>
 import SearchBar from './SearchBar.vue';
+import LoginModal from './LoginModal.vue';
+import CreateAccountModal from './CreateAccountModal.vue';
 
 export default {
   name: "NavBar",
   data: function(){
-    return {}
+    return {
+      showLoginModal: false,
+      showCreateModal: false
+    }
   },
 
   props: {
-    // Accept Number, Array, or Object (Cart model) and default to 0 to avoid missing badge
     cartCount: { type: [Number, Array, Object], default: 0 },
     searchQuery: { type: String, default: "" },
     links: { type: Array, default: () => [] },
@@ -16,7 +20,7 @@ export default {
     cartLabel: { type: String, default: "View Cart" }
   },
 
-  emits: ['search', 'update:searchQuery', 'navigate'],
+  emits: ['search', 'update:searchQuery', 'navigate', 'login', 'create-account'],
 
   methods: {
     triggerSearch(eventOrValue) {
@@ -52,28 +56,38 @@ export default {
       } catch (e) {
         // swallow navigation errors
       }
+    },
+    openLogin() {
+      this.showLoginModal = true;
+    },
+    openCreate() {
+      this.showCreateModal = true;
+    },
+    handleLogin(payload) {
+      this.$emit('login', payload);
+      this.showLoginModal = false;
+    },
+    handleCreateAccount(payload) {
+      this.$emit('create-account', payload);
+      this.showCreateModal = false;
     }
   },
 
   components: {
-    SearchBar
+    SearchBar,
+    LoginModal,
+    CreateAccountModal
   },
 
   computed: {
     normalizedCartCount() {
       const v = this.cartCount;
-
-      // If an array was passed (e.g. products), use its length
       if (Array.isArray(v)) return v.length;
-
-      // If an object with length or numeric count was passed
       if (v && typeof v === 'object') {
         if (typeof v.length === 'number') return v.length;
         if (typeof v.count === 'function') return Number(v.count()) || 0;
         if (typeof v.count === 'number') return v.count;
       }
-
-      // Otherwise coerce to number (handles numeric strings)
       return Number(v) || 0;
     }
   }
@@ -93,18 +107,35 @@ export default {
             <a class="nav-link" href="#" @click.prevent="navigateTo(link.value)">{{ link.label }}</a>
           </li>
         </ul>
+
         <search-bar
             class="me-3"
             :search-query="searchQuery"
             @update:searchQuery="triggerSearch"
             @search="triggerSearch"
         />
+
+        <!-- Account dropdown between search and cart -->
+        <div class="dropdown me-3">
+          <button class="btn btn-outline-light dropdown-toggle" type="button" id="loginDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+            Account
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="loginDropdown">
+            <li><a class="dropdown-item" href="#" @click.prevent="openLogin">Login</a></li>
+            <li><a class="dropdown-item" href="#" @click.prevent="openCreate">Create Account</a></li>
+          </ul>
+        </div>
+
         <a href="#" class="btn btn-warning position-relative mt-lg-0 mt-2" @click.prevent="navigateTo('cart')">
           {{ cartLabel }}
           <span v-if="normalizedCartCount > 0" class="badge bg-danger position-absolute top-0 start-100 translate-middle rounded-pill">{{ normalizedCartCount }}</span>
         </a>
       </div>
     </div>
+
+    <!-- Modals -->
+    <login-modal v-if="showLoginModal" @close="showLoginModal = false" @login="handleLogin" />
+    <create-account-modal v-if="showCreateModal" @close="showCreateModal = false" @create-account="handleCreateAccount" />
   </nav>
 </template>
 
