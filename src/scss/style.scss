@@ -1,0 +1,229 @@
+/* scss */
+$bg: #f8f9fa;
+$text: #22223B;
+$primary: #3A86FF;
+$accent: #e9c46a;
+$genre-bg: #8338EC;
+$card-shadow: rgba(58, 134, 255, 0.18);
+
+@import "bootstrap/scss/bootstrap";
+
+// Mixins
+@mixin card-shadow($opacity: 0.18, $y: 4px, $blur: 24px) {
+  box-shadow: 0 $y $blur rgba(58, 134, 255, $opacity);
+}
+
+// Global
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; padding: 0; }
+
+body {
+  background: $bg;
+  color: $text;
+  font-family: "Inter", "Segoe UI", Arial, sans-serif;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+nav {
+  background: linear-gradient(270deg, $primary 60%, $accent 100%);
+  box-shadow: 0 2px 8px rgba(58, 134, 255, 0.1);
+}
+
+/* Navbar container improvements: keep layout flexible and constrain inputs so elements fit on one line */
+.navbar .container,
+.navbar .container-fluid {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Constrain navbar inputs to avoid forcing wrap while still being responsive */
+.navbar .form-control {
+  max-width: 360px;
+  flex: 1 1 320px;
+  min-width: 160px;
+}
+
+/* Keep buttons compact and prevent unexpected wrapping */
+.navbar .btn {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+// Layout helpers
+#app { flex: 1 0 auto; display: flex; flex-direction: column; }
+main, section { flex: 1 0 auto; }
+
+// Lists & cards
+.book-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: center;
+}
+
+.book-card {
+  flex: 1 1 50%;
+  max-width: 100%;
+  min-width: 100px;
+  margin: 0;
+  @include card-shadow();
+  border-radius: 0 !important;
+}
+
+// Genre card
+.genre-card {
+  background: $genre-bg;
+  border-radius: 1.5rem;
+  box-shadow: 0 4px 16px rgba(131, 56, 236, 0.15);
+  transition: transform 0.2s;
+  .btn {
+    color: $primary !important;
+    background: $accent !important;
+    font-weight: 700;
+    border: 1px solid rgba(226, 178, 61, 1);
+    box-shadow: 0 2px 8px rgba(58, 134, 255, 0.18);
+  }
+  &:hover {
+    transform: translateY(-4px) scale(1.03);
+    box-shadow: 0 8px 24px rgba(131, 56, 236, 0.25);
+    .btn { background: rgba(226, 178, 61, 1) !important; color: $bg !important; }
+  }
+}
+
+// Cards (general)
+.card, .genre-card, .book-card {
+  @include card-shadow();
+  border: 1px solid white;
+}
+
+.card {
+  background: $bg;
+  border-radius: 1.25rem;
+  box-shadow: 0 2px 12px rgba(58, 134, 255, 0.08);
+  border: none;
+  transition: box-shadow 0.2s;
+  border-radius: 0 !important;
+
+  .card-title { color: $primary; font-weight: 700; }
+  .card-text { color: $text; }
+
+  .btn-info {
+    background: $primary;
+    color: $bg;
+    border-radius: 0.75rem;
+    border: none;
+  }
+  .btn-success {
+    background: $accent;
+    color: $text;
+    border-radius: 0.75rem;
+    border: none;
+  }
+
+  &:hover { box-shadow: 0 6px 24px rgba(58, 134, 255, 0.18); }
+}
+
+// Image fixes
+.card-img-fixed {
+  width: 100%;
+  height: 500px;
+  object-fit: cover;
+  display: block;
+  border-radius: 0 !important;
+}
+
+// Modal & footer
+.modal-content { border-radius: 1.5rem; box-shadow: 0 8px 32px rgba(58, 134, 255, 0.12); }
+
+footer {
+  background: $text;
+  color: $bg;
+  letter-spacing: 0.05em;
+  font-size: 1.1rem;
+  border-top: 4px solid $accent;
+  flex-shrink: 0;
+}
+
+
+// Book details modal layout
+.book-details-modal {
+  .modal-body {
+    display: flex;
+    flex-direction: row-reverse;
+    align-items: flex-start;
+    gap: 2rem;
+
+    img { max-width: 250px; height: auto; border-radius: 0; }
+  }
+
+  @media (max-width: 768px) {
+    .modal-body { flex-direction: column; gap: 1rem; }
+  }
+}
+
+// Small screen adjustments
+@media (max-width: 576px) {
+  .modal-dialog { max-width: 95vw; margin: 1rem auto; }
+  .modal-content { padding: 0.5rem; }
+  .form-control, .input-group { margin-bottom: 1rem !important; }
+  .card-img-fixed { height: 220px; }
+  .input-group .btn {
+    height: 38px !important;
+    padding: 0.375rem 0.75rem !important;
+    font-size: 1rem !important;
+    line-height: 1.5 !important;
+  }
+  .navbar .form-control, .navbar .btn {
+    height: 38px !important;
+    font-size: 1rem !important;
+    padding: 0.375rem 0.75rem !important;
+    margin-bottom: 0 !important;
+    box-sizing: border-box;
+    box-shadow: 0 2px 8px rgba(58, 134, 255, 0.18);
+  }
+  .navbar .d-flex { align-items: center !important; }
+}
+
+// Utility: keep responsive font-sizes as in original
+@media (min-width: 1200px) {
+  .fs-1 { font-size: 2.5rem !important; }
+  .fs-2 { font-size: 2rem !important; }
+  .fs-3 { font-size: 1.75rem !important; }
+  .fs-4 { font-size: 1.5rem !important; }
+}
+
+/* Make category buttons align with book cards on md+.
+   Home.vue renders five category buttons: 3 parents, Daily Deals, Sort.
+   Reduce each to ~18% and tighten gaps so all five fit into a single row.
+*/
+@media (min-width: 768px) {
+  /* center the row and tighten gap so five items fit neatly */
+  .category-row {
+    gap: 0.25rem;
+    justify-content: center; /* center columns in the row */
+    align-items: stretch;
+    box-sizing: border-box;
+  }
+
+  /* five equal columns that account for the gap so they don't wrap */
+  .category-row > .col-md-2 {
+    flex: 0 0 calc(19% - 0.2rem) !important;
+    max-width: calc(19% - 0.2rem) !important;
+    padding-left: 0.25rem !important;
+    padding-right: 0.25rem !important;
+    box-sizing: border-box;
+  }
+
+  /* ensure buttons fill their column and keep comfortable size */
+  .category-row .category-btn {
+    width: 100%;
+    height: 44px;
+    padding: 0.25rem 0.5rem;
+    font-size: 1rem;
+    box-sizing: border-box;
+  }
+}
