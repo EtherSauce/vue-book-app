@@ -1,4 +1,8 @@
 <script>
+import { auth, db } from '@/firebase/index.js';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
+
 export default {
   name: 'CreateAccountModal',
   data() {
@@ -11,20 +15,39 @@ export default {
   },
   emits: ['create-account', 'close'],
   methods: {
-    submit() {
-      // Simple client-side check for password match
-      const payload = {
-        name: this.name.trim(),
-        email: this.email.trim(),
-        password: this.password
-      };
+    async submit() {
+      const name = this.name.trim();
+      const email = this.email.trim();
+
       if (this.password !== this.confirm) {
-        // minimal UX: native alert (you can replace with better UI)
         alert('Passwords do not match.');
         return;
       }
-      this.$emit('create-account', payload);
-      this.$emit('close');
+
+      if (!email || !this.password) {
+        alert('Please provide an email and password.');
+        return;
+      }
+
+      try {
+        const cred = await createUserWithEmailAndPassword(auth, email, this.password);
+        const uid = cred.user.uid;
+
+        // create / merge Firestore user doc
+        await setDoc(doc(db, 'users', uid), {
+          name,
+          email,
+          role: 'customer',
+          createdAt: new Date().toISOString()
+        }, { merge: true });
+
+        // emit created user info to parent
+        this.$emit('create-account', { uid, email, name });
+        this.$emit('close');
+      } catch (e) {
+        // minimal error UX — replace with better UI if desired
+        alert(e.message || 'Failed to create account.');
+      }
     },
     close() {
       this.$emit('close');
