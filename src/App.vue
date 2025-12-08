@@ -8,7 +8,8 @@ import CartBody from "./components/CartBody.vue";
 import CheckoutForm from './components/CheckoutForm.vue';
 import AppFooter from "./components/AppFooter.vue";
 import RemoveItemModal from './components/RemoveItemModal.vue';
-
+import { onAuthStateChanged, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { auth } from './firebase/index.js';
 import Cart from './models/Cart.vue';
 import { createInventory } from './models/Inventory.vue';
 
@@ -43,7 +44,13 @@ export default {
       // book modal
       selectedBook: null,
       selectedQuantity: 1,
+
+      user: null
     };
+  },
+
+  beforeUnmount() {
+    if (this._unsubAuth) this._unsubAuth();
   },
 
   methods: {
@@ -136,13 +143,35 @@ export default {
       this.searchQuery = value || '';
     },
 
-    handleCategoryChanged(cat) {
-      this.selectedCategory = cat;
+    // Auth handlers used by NavBar
+    async handleLogin(payload) {
+      try {
+        const res = await signInWithEmailAndPassword(auth, payload.email, payload.password);
+        // onAuthStateChanged will update `this.user`, but set immediately for snappy UI
+        this.user = { uid: res.user.uid, email: res.user.email, displayName: res.user.displayName };
+      } catch (e) {
+        alert('Login failed: ' + (e.message || e));
+      }
     },
-
-    handleSearch(value) {
-      this.searchQuery = value;
+    async handleCreateAccount(payload) {
+      try {
+        const cred = await createUserWithEmailAndPassword(auth, payload.email, payload.password);
+        if (payload.name && cred.user) {
+          await updateProfile(cred.user, { displayName: payload.name });
+        }
+        // user will be set by onAuthStateChanged
+      } catch (e) {
+        alert('Create account failed: ' + (e.message || e));
+      }
     },
+    async handleLogout() {
+      try {
+        await signOut(auth);
+        this.user = null;
+      } catch (e) {
+        console.error('Sign out failed', e);
+      }
+    }
   },
 
   computed: {
@@ -197,6 +226,10 @@ export default {
         console.warn('Failed to parse saved cart:', e);
       }
     }
+    // single auth listener
+    this._unsubAuth = onAuthStateChanged(auth, (u) => {
+      this.user = u ? { uid: u.uid, email: u.email, displayName: u.displayName } : null;
+    });
   },
 
   watch: {
@@ -225,11 +258,15 @@ export default {
 <template>
 
   <div class="app-root">
-    <nav-bar
+    <NavBar
+        :user="user"
         :cart-count="cartCount"
-        :search-query="searchQuery"
         @search="onNavbarSearch"
+        @update:searchQuery="onNavbarSearch"
         @navigate="handleNavigate"
+        @login="handleLogin"
+        @create-account="handleCreateAccount"
+        @logout="handleLogout"
     />
 
     <router-view v-slot="{ Component }">

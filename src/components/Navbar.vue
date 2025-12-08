@@ -13,6 +13,7 @@ export default {
   },
 
   props: {
+    user: { type: Object, default: null },
     cartCount: { type: [Number, Array, Object], default: 0 },
     searchQuery: { type: String, default: "" },
     links: { type: Array, default: () => [] },
@@ -20,7 +21,7 @@ export default {
     cartLabel: { type: String, default: "View Cart" }
   },
 
-  emits: ['search', 'update:searchQuery', 'navigate', 'login', 'create-account'],
+  emits: ['search', 'update:searchQuery', 'navigate', 'login', 'create-account', 'logout'],
 
   methods: {
     triggerSearch(eventOrValue) {
@@ -70,6 +71,9 @@ export default {
     handleCreateAccount(payload) {
       this.$emit('create-account', payload);
       this.showCreateModal = false;
+    },
+    emitLogout() {
+      this.$emit('logout');
     }
   },
 
@@ -115,14 +119,28 @@ export default {
             @search="triggerSearch"
         />
 
-        <!-- Account dropdown between search and cart -->
+        <!-- Account dropdown: switch UI when user is signed in -->
         <div class="dropdown me-3">
-          <button class="btn btn-outline-light dropdown-toggle" type="button" id="loginDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-            Account
+          <button
+              class="btn btn-outline-light dropdown-toggle"
+              type="button"
+              id="loginDropdown"
+              data-bs-toggle="dropdown"
+              aria-expanded="false"
+          >
+            <span v-if="user">{{ user.displayName || user.email }}</span>
+            <span v-else>Account</span>
           </button>
+
           <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="loginDropdown">
-            <li><a class="dropdown-item" href="#" @click.prevent="openLogin">Login</a></li>
-            <li><a class="dropdown-item" href="#" @click.prevent="openCreate">Create Account</a></li>
+            <template v-if="user">
+              <li><a class="dropdown-item" href="#" @click.prevent="navigateTo('Account')">Manage</a></li>
+              <li><a class="dropdown-item" href="#" @click.prevent="emitLogout">Logout</a></li>
+            </template>
+            <template v-else>
+              <li><a class="dropdown-item" href="#" @click.prevent="openLogin">Login</a></li>
+              <li><a class="dropdown-item" href="#" @click.prevent="openCreate">Create Account</a></li>
+            </template>
           </ul>
         </div>
 
@@ -133,9 +151,9 @@ export default {
       </div>
     </div>
 
-    <!-- Modals -->
-    <login-modal v-if="showLoginModal" @close="showLoginModal = false" @login="handleLogin" />
-    <create-account-modal v-if="showCreateModal" @close="showCreateModal = false" @create-account="handleCreateAccount" />
+    <!-- Modals (only show when not logged in) -->
+    <login-modal v-if="showLoginModal && !user" @close="showLoginModal = false" @login="handleLogin" />
+    <create-account-modal v-if="showCreateModal && !user" @close="showCreateModal = false" @create-account="handleCreateAccount" />
   </nav>
 </template>
 
