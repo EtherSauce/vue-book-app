@@ -5,6 +5,7 @@ import Checkout from '../views/Checkout.vue';
 import UserAccount from '@/views/UserAccount.vue';
 import AdminDashboard from '@/views/AdminDashboard.vue';
 import SeedUsers from '../views/SeedUsers.vue'; // new dev page
+import SeedInventory from '../views/SeedInventory.vue'; // dev-only seeder page
 
 // Firebase imports for auth & checking Firestore user role
 import { auth, db } from '@/firebase/index.js';
@@ -18,7 +19,8 @@ const routes = [
     { path: '/admin', name: 'Admin', component: AdminDashboard, meta: { requiresAuth: true, requiresAdmin: true } },
 
     // Dev-only seeder (remove or protect for production)
-    { path: '/seed-users', name: 'SeedUsers', component: SeedUsers }
+    { path: '/seed-users', name: 'SeedUsers', component: SeedUsers },
+    { path: '/seed-inventory', name: 'SeedInventory', component: SeedInventory }
 ];
 
 const router = createRouter({
