@@ -4,7 +4,7 @@ import { getFirestore, enableIndexedDbPersistence } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 
 // Your web app's Firebase configuration
-alert('add your firebase config in models/Firebase.js');
+//alert('add your firebase config in models/Firebase.js');
 const firebaseConfig = {
     apiKey: "AIzaSyAo2_E7v0sG8Re1wq5S_GrDZGLnBDQW_Rk",
     authDomain: "fir-demo-7246e.firebaseapp.com",
@@ -23,4 +23,4 @@ export const storage = getStorage(app);
 // Enable offline persistence (optional; ignore errors for multi-tab)
 enableIndexedDbPersistence(db).catch(() => {});
 
-export { db, storage};
+export { };
