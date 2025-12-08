@@ -10,23 +10,21 @@ import AppFooter from "./components/AppFooter.vue";
 import RemoveItemModal from './components/RemoveItemModal.vue';
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { auth } from './firebase/index.js';
-import Cart from './models/Cart.vue';
 import { createInventory } from './models/Inventory.vue';
-
-import * as bootstrap from 'bootstrap'
-
+import * as bootstrap from 'bootstrap';
+import cartService from '@/utils/cartService.js';
 
 export default {
   name: 'App',
-  data: function() {
+  data() {
     return {
-      cart: new Cart(),
       inventory: createInventory(),
 
       selectedCategory: null,
       searchQuery: '',
       sortBy: 'none',
       filterAuthor: null,
+
       // Checkout fields
       shippingName: '',
       shippingAddress: '',
@@ -45,15 +43,120 @@ export default {
       selectedBook: null,
       selectedQuantity: 1,
 
-      user: null
+      user: null,
+      cart: cartService.emptyCart(),
+      cartUnsub: null,
+      _unsubAuth: null
     };
   },
 
-  beforeUnmount() {
-    if (this._unsubAuth) this._unsubAuth();
+  components: {
+    BookCard,
+    ItemDetailsModal,
+    CategorySelector,
+    MoreCategoriesModal,
+    Navbar,
+    CartBody,
+    CheckoutForm,
+    AppFooter,
+    RemoveItemModal
+  },
+
+  computed: {
+    filteredInventory() {
+      const q = (this.searchQuery || '').trim().toLowerCase();
+      const selected = this.selectedCategory;
+      const parentCategories = ['Fiction', 'Non-Fiction', 'Children'];
+
+      return this.inventory.filter(book => {
+        if (q) {
+          const hay = (
+              (book.title || '') + ' ' +
+              (book.author || '') + ' ' +
+              (book.description || '') + ' ' +
+              (book.categories ? book.categories.join(' ') : '')
+          ).toLowerCase();
+          if (!hay.includes(q)) return false;
+        }
+
+        if (!selected) return true;
+        if (selected === 'Daily Deals') return !!book.dailyDeal;
+        if (parentCategories.includes(selected)) {
+          return book.parentCategory === selected;
+        }
+        if (book.categories && book.categories.includes(selected)) return true;
+        if (book.category === selected) return true;
+        return false;
+      });
+    },
+
+    products() {
+      return this.cart.items || [];
+    },
+
+    cartCount() {
+      return (this.cart.items || []).reduce((s, i) => s + (Number(i.quantity) || 0), 0);
+    },
+
+    cartTotal() {
+      return (this.cart.items || []).reduce((s, i) => s + ((Number(i.quantity) || 0) * (Number(i.price) || 0)), 0);
+    }
   },
 
   methods: {
+    // Cart / UI helpers
+    async loadInitialCart(forUser) {
+      if (this.cartUnsub) { this.cartUnsub(); this.cartUnsub = null; }
+
+      if (forUser) {
+        // Merge guest into user cart on sign-in, then subscribe to server cart
+        const merged = await cartService.mergeGuestIntoUser();
+        this.cart = merged || (await cartService.loadCart());
+        this.cartUnsub = cartService.subscribeToUserCart(c => {
+          this.cart = c || cartService.emptyCart();
+        });
+      } else {
+        // guest cart
+        this.cart = await cartService.loadCart();
+      }
+    },
+
+    async addToCart(item, qty = 1) {
+      if (!this.cart.items) this.cart.items = [];
+      const existing = this.cart.items.find(i => i.id === item.id);
+      if (existing) {
+        existing.quantity = (Number(existing.quantity) || 0) + Number(qty);
+      } else {
+        // copy minimal item (preserve price/title/id)
+        this.cart.items.push(Object.assign({}, item, { quantity: Number(qty) }));
+      }
+      this.cart.updatedAt = new Date().toISOString();
+      await cartService.saveCart(this.cart);
+    },
+
+    async updateQuantity(item, newQty) {
+      if (!this.cart.items) return;
+      const it = this.cart.items.find(i => i.id === item.id || i.id === item);
+      if (!it) return;
+      it.quantity = Number(newQty) || 0;
+      // remove items with zero quantity
+      this.cart.items = this.cart.items.filter(i => (Number(i.quantity) || 0) > 0);
+      this.cart.updatedAt = new Date().toISOString();
+      await cartService.saveCart(this.cart);
+    },
+
+    async removeFromCart(itemOrId) {
+      const id = (typeof itemOrId === 'string' || typeof itemOrId === 'number') ? itemOrId : itemOrId.id;
+      this.cart.items = (this.cart.items || []).filter(i => i.id !== id);
+      this.cart.updatedAt = new Date().toISOString();
+      await cartService.saveCart(this.cart);
+    },
+
+    async clearCart() {
+      this.cart = cartService.emptyCart();
+      await cartService.saveCart(this.cart);
+    },
+
     openBookModal(book) {
       this.selectedBook = book;
       this.selectedQuantity = 1;
@@ -63,18 +166,14 @@ export default {
     closeBookModal() {
       this.selectedBook = null;
     },
-    addToCart(book, qty = 1) {
-      this.cart.add(book, qty);
-    },
+
     setCategory(category) {
       this.selectedCategory = category;
     },
     clearCategory() {
       this.selectedCategory = null;
     },
-    updateQuantity(item, newQty) {
-      this.cart.updateQuantity(item, newQty);
-    },
+
     removeItem(item) {
       this.itemToRemove = item;
       this.showRemoveModal = true;
@@ -86,7 +185,7 @@ export default {
         this.itemToRemove = null;
         return;
       }
-      this.cart.remove(target);
+      this.removeFromCart(target);
       if (!item) {
         this.itemToRemove = null;
         this.showRemoveModal = false;
@@ -99,13 +198,9 @@ export default {
       this.showRemoveModal = false;
       this.itemToRemove = null;
     },
-    emptyCart() {
-      this.cart.clear();
-    },
 
     handleEmptyCart() {
-      this.cart.clear();
-      console.log("Empty cart triggered");
+      this.clearCart();
       this.shippingName = '';
       this.shippingAddress = '';
       this.shippingCity = '';
@@ -147,116 +242,54 @@ export default {
     async handleLogin(payload) {
       try {
         const res = await signInWithEmailAndPassword(auth, payload.email, payload.password);
-        // onAuthStateChanged will update `this.user`, but set immediately for snappy UI
+        // onAuthStateChanged will update `this.user` and load/merge cart; set immediate for snappy UI
         this.user = { uid: res.user.uid, email: res.user.email, displayName: res.user.displayName };
       } catch (e) {
         alert('Login failed: ' + (e.message || e));
       }
     },
+
     async handleCreateAccount(payload) {
       try {
         const cred = await createUserWithEmailAndPassword(auth, payload.email, payload.password);
         if (payload.name && cred.user) {
           await updateProfile(cred.user, { displayName: payload.name });
         }
-        // user will be set by onAuthStateChanged
+        // Firestore user doc creation is handled where you implemented it (CreateAccountModal)
       } catch (e) {
         alert('Create account failed: ' + (e.message || e));
       }
     },
+
     async handleLogout() {
       try {
         await signOut(auth);
         this.user = null;
+        // onAuthStateChanged handler will load guest cart
       } catch (e) {
         console.error('Sign out failed', e);
       }
     }
   },
 
-  computed: {
-    filteredInventory() {
-      const q = (this.searchQuery || '').trim().toLowerCase();
-      const selected = this.selectedCategory;
-      const parentCategories = ['Fiction', 'Non-Fiction', 'Children'];
+  mounted() {
+    // initial guest cart load and auth listener
+    this.loadInitialCart(false);
 
-      return this.inventory.filter(book => {
-        if (q) {
-          const hay = (
-              (book.title || '') + ' ' +
-              (book.author || '') + ' ' +
-              (book.description || '') + ' ' +
-              (book.categories ? book.categories.join(' ') : '')
-          ).toLowerCase();
-          if (!hay.includes(q)) return false;
-        }
-
-        if (!selected) return true;
-        if (selected === 'Daily Deals') return !!book.dailyDeal;
-        if (parentCategories.includes(selected)) {
-          return book.parentCategory === selected;
-        }
-        if (book.categories && book.categories.includes(selected)) return true;
-        if (book.category === selected) return true;
-        return false;
-      });
-    },
-    products() {
-      return this.cart.items;
-    },
-    cartCount() {
-      if (this.cart && typeof this.cart.count === 'function') {
-        const c = this.cart.count();
-        return Number.isFinite(c) ? c : 0;
-      }
-      return 0;
-    },
-    cartTotal() {
-      return this.cart.total();
-    },
-  },
-
-  mounted: function () {
-    const saved = localStorage.getItem('cart');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        this.cart = new Cart(parsed);
-      } catch (e) {
-        console.warn('Failed to parse saved cart:', e);
-      }
-    }
-    // single auth listener
-    this._unsubAuth = onAuthStateChanged(auth, (u) => {
+    this._unsubAuth = onAuthStateChanged(auth, async (u) => {
       this.user = u ? { uid: u.uid, email: u.email, displayName: u.displayName } : null;
+      await this.loadInitialCart(!!u);
     });
   },
 
-  watch: {
-    products: {
-      handler(newVal) {
-        localStorage.setItem('cart', JSON.stringify(newVal));
-      },
-      deep: true
-    }
-  },
-
-  components: {
-    BookCard,
-    ItemDetailsModal,
-    CategorySelector,
-    MoreCategoriesModal,
-    Navbar,
-    CartBody,
-    CheckoutForm,
-    AppFooter,
-    RemoveItemModal
-  },
+  beforeUnmount() {
+    if (this._unsubAuth) this._unsubAuth();
+    if (this.cartUnsub) this.cartUnsub();
+  }
 };
 </script>
 
 <template>
-
   <div class="app-root">
     <NavBar
         :user="user"
@@ -289,14 +322,17 @@ export default {
           :card-number.sync="cardNumber"
           :exp-date.sync="expDate"
           :cvv.sync="cvv"
+          :cart="cart"
+          :cart-count="cartCount"
           @add-to-cart="addToCart"
+          @remove-from-cart="removeFromCart"
+          @update-quantity="updateQuantity"
           @view-details="openBookModal"
           @close-book-modal="closeBookModal"
           @category-changed="setCategory"
           @confirm-remove="removeFromCartConfirmed"
           @cancel-remove="cancelRemove"
           @remove-item="confirmRemove"
-          @update-quantity="updateQuantity"
           @empty-cart="handleEmptyCart"
       />
     </router-view>
