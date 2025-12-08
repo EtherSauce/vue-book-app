@@ -1,11 +1,11 @@
-// javascript
-// File: `src/utils/seedUsers.js`
-// Utility to create two accounts (staff + customer) and corresponding Firestore `users/{uid}` docs.
-// Uses client SDK functions exported from `src/firebase/index.js`. Safe to run from the dev UI page below.
-
+// File: src/utils/SeedUser.js
 import { auth, db } from '../firebase/index.js';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
+
+function generateCustomerId() {
+    return 'u_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
+}
 
 async function ensureUser(email, password, name, role, extra = {}) {
     let uid = null;
@@ -29,13 +29,18 @@ async function ensureUser(email, password, name, role, extra = {}) {
 
     if (!uid) return { email, ok: false, error: 'Could not determine uid' };
 
-    // create / merge Firestore user doc
+    // determine a customerId but preserve any existing one
     try {
         const ref = doc(db, 'users', uid);
+        const snap = await getDoc(ref);
+        let customerId = (snap && snap.exists() && snap.data() && snap.data().customerId) ? snap.data().customerId : generateCustomerId();
+
+        // create / merge Firestore user doc
         await setDoc(ref, {
             name,
             email,
             role,
+            customerId,
             ...extra,
             seededAt: new Date().toISOString()
         }, { merge: true });
@@ -43,7 +48,7 @@ async function ensureUser(email, password, name, role, extra = {}) {
         // sign out so the app's auth state isn't left as the created user
         try { await signOut(auth); } catch (_) {}
 
-        return { email, uid, ok: true };
+        return { email, uid, ok: true, customerId };
     } catch (e) {
         return { email, uid, ok: false, error: e.message || String(e) };
     }

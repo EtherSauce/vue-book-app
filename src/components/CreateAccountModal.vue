@@ -15,6 +15,11 @@ export default {
   },
   emits: ['create-account', 'close'],
   methods: {
+    generateCustomerId() {
+      // short, reasonably-unique id: u_<time36>_<rand6>
+      return 'u_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
+    },
+
     async submit() {
       const name = this.name.trim();
       const email = this.email.trim();
@@ -33,16 +38,20 @@ export default {
         const cred = await createUserWithEmailAndPassword(auth, email, this.password);
         const uid = cred.user.uid;
 
+        // generate a short public customer id to use when recording/looking up orders
+        const customerId = this.generateCustomerId();
+
         // create / merge Firestore user doc
         await setDoc(doc(db, 'users', uid), {
           name,
           email,
           role: 'customer',
+          customerId,
           createdAt: new Date().toISOString()
         }, { merge: true });
 
-        // emit created user info to parent
-        this.$emit('create-account', { uid, email, name });
+        // emit created user info to parent (include customerId)
+        this.$emit('create-account', { uid, email, name, customerId });
         this.$emit('close');
       } catch (e) {
         // minimal error UX — replace with better UI if desired

@@ -1,7 +1,11 @@
+<!-- vue -->
+<!-- File: `src/components/CheckoutForm.vue` -->
 <script>
 import AccordionSection from './AccordionSection.vue';
 import CartSummary from './CartSummary.vue';
 import OrderConfirmationModal from './OrderConfirmationModal.vue';
+import { auth } from '@/firebase/index.js';
+import createOrder from '@/utils/orders.js'; // helper created above
 
 export default {
   name: "CheckoutForm",
@@ -138,16 +142,65 @@ export default {
       return true;
     },
 
-    placeOrder() {
-      if (this.validateForm()) {
-        this.showConfirmation = true;
-        this.$emit('order-placed');
-      } else {
-        // Scroll to first invalid input
+    // Single merged placeOrder method (fixed duplicate declaration)
+    async placeOrder() {
+      if (!this.validateForm()) {
         this.$nextTick(() => {
           const invalidInput = document.querySelector('.is-invalid');
           if (invalidInput) invalidInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
         });
+        return;
+      }
+
+      // Build order payload
+      const user = auth.currentUser;
+      const items = (this.products || []).map(p => ({
+        id: p.id,
+        title: p.title,
+        price: Number(p.price) || 0,
+        quantity: Number(p.quantity) || 1
+      }));
+
+      const digits = (this.localCardNumber || '').replace(/\s+/g, '');
+      const last4 = digits ? digits.slice(-4) : null;
+
+      const orderPayload = {
+        userId: user ? user.uid : null,
+        userEmail: user ? user.email : (this.localShippingEmail || null),
+        shipping: {
+          name: this.localShippingName,
+          address: this.localShippingAddress,
+          city: this.localShippingCity,
+          state: this.localShippingState,
+          zip: this.localShippingZip,
+          email: this.localShippingEmail
+        },
+        payment: {
+          cardLast4: last4,
+          expDate: this.localExpDate
+        },
+        items,
+        total: Number(this.cartTotal) || 0
+        // status and createdAt handled in createOrder
+      };
+
+      try {
+        let orderNumber = null;
+
+        if (user) {
+          // record order for signed-in users
+          orderNumber = await createOrder(orderPayload);
+          this.$emit('order-placed', orderNumber);
+        } else {
+          // guests: do not write to DB, still allow confirmation
+          this.$emit('order-placed', null);
+        }
+
+        // show confirmation and clear cart via existing UI flow
+        this.showConfirmation = true;
+      } catch (e) {
+        console.error('Failed to create order:', e);
+        alert('Failed to place order. Please try again.');
       }
     },
 
@@ -183,7 +236,6 @@ export default {
       this.$emit(`update:${field}`, value);
       // remove the specific field warning as soon as the user types
       if (this.errors && this.errors[field]) {
-        // delete key reactively
         const { [field]: removed, ...rest } = this.errors;
         this.errors = rest;
       }
@@ -286,7 +338,6 @@ export default {
             </button>
           </accordion-section>
         </div>
-
 
         <order-confirmation-modal
             v-if="showConfirmation"
