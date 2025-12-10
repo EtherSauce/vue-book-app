@@ -57,9 +57,6 @@ export default {
     <div class="card-body d-flex flex-column">
       <div class="d-flex justify-content-between align-items-start">
         <h5 class="card-title mb-0">{{ book.title }}</h5>
-        <button class="btn btn-sm" :class="localFavorite ? 'btn-outline-danger' : 'btn-outline-secondary'" @click="onFavoriteClick" :aria-pressed="localFavorite">
-          <span v-if="localFavorite">♥</span><span v-else>♡</span>
-        </button>
       </div>
 
       <p class="card-text text-success fw-bold mb-2">${{ book.price.toFixed(2) }}</p>

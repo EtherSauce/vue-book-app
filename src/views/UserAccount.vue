@@ -18,7 +18,7 @@ export default {
       tabs: [
         { key: 'settings', label: 'Account Settings' },
         { key: 'orders', label: 'Order History' },
-        { key: 'wishlist', label: 'Wishlist' }
+        // { key: 'wishlist', label: 'Wishlist' }
       ],
       active: 'settings',
       orders: [],
@@ -155,9 +155,9 @@ export default {
       <order-history v-else :orders="orders" />
     </div>
 
-    <div v-if="active === 'wishlist'">
-      <wishlist :items="wishlist" @add-to-cart="$emit('add-to-cart', $event)" />
-    </div>
+<!--    <div v-if="active === 'wishlist'">-->
+<!--      <wishlist :items="wishlist" @add-to-cart="$emit('add-to-cart', $event)" />-->
+<!--    </div>-->
   </main>
 </template>
 

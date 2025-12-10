@@ -93,15 +93,6 @@ export default {
   <div class="modal-content position-relative" v-if="item">
     <div class="modal-header">
       <h5 class="modal-title">{{ item.title || item.name }}</h5>
-      <div class="ms-2 d-flex align-items-center">
-        <button class="btn btn-sm me-2" @click="onFavClick">
-          <span v-if="localFavorite">♥</span><span v-else>♡</span>
-        </button>
-        <select class="form-select form-select-sm" style="width: 5rem;" :value="localRating" @change="onRatingChange">
-          <option value="0">Rate</option>
-          <option v-for="n in 5" :key="n" :value="n">{{ n }}★</option>
-        </select>
-      </div>
       <button type="button" class="btn-close" @click="closeModal"></button>
     </div>
 
@@ -112,15 +103,6 @@ export default {
             <slot name="details">
               <p v-if="item.author">Author: {{ item.author }}</p>
               <p v-if="item.price" class="card-text text-success fw-bold">${{ item.price.toFixed(2) }}</p>
-
-              <!-- Rating display added -->
-              <p v-if="localRating && Number(localRating) > 0" class="mb-2">
-                <strong>Rating:</strong>
-                <span v-for="n in 5" :key="n" class="text-warning">
-                  <span v-if="n <= Number(localRating)">★</span><span v-else>☆</span>
-                </span>
-                <small class="text-muted">({{ Number(localRating) }})</small>
-              </p>
 
               <p v-if="item.categories && item.categories.length">Category: {{ item.categories.join(' / ') }}</p>
               <p v-else-if="item.parentCategory">Category: {{ item.parentCategory }} / {{ item.category }}</p>
