@@ -1,5 +1,3 @@
-// File: `src/utils/createOrder.js`
-/* javascript */
 import { db } from '@/firebase/index.js';
 import { collection, addDoc, serverTimestamp, doc, getDoc } from 'firebase/firestore';
 import { auth } from '@/firebase/index.js';
@@ -57,7 +55,6 @@ export async function createOrder({ items = [], total = 0, user = null, userEmai
 
     const ref = await addDoc(collection(db, 'orders'), payload);
 
-    // Return helpful client-side info (note createdAt will be a server timestamp on Firestore)
     return {
         id: ref.id,
         customerId: customerId || null,

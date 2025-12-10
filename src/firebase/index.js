@@ -21,6 +21,6 @@ export const db = getFirestore(app);
 export const storage = getStorage(app);
 
 // Enable offline persistence (optional; ignore errors for multi-tab)
-enableIndexedDbPersistence(db).catch(() => {});
+//enableIndexedDbPersistence(db).catch(() => {});
 
 export { };

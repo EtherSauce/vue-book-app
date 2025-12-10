@@ -109,7 +109,6 @@ export default {
       </li>
     </ul>
 
-    <!-- ORDERS TAB -->
     <div v-if="activeTab === 'orders'">
       <div v-if="loadingOrders" class="text-muted">Loading orders…</div>
       <div v-else-if="ordersError" class="text-danger">Error: {{ ordersError }}</div>
@@ -140,7 +139,6 @@ export default {
       </div>
     </div>
 
-    <!-- INVENTORY TAB -->
     <div v-if="activeTab === 'inventory'">
       <div v-if="loadingInventory" class="text-muted">Loading inventory…</div>
       <div v-else-if="inventoryError" class="text-danger">Error: {{ inventoryError }}</div>

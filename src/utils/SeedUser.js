@@ -1,4 +1,3 @@
-// File: src/utils/SeedUser.js
 import { auth, db } from '../firebase/index.js';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
