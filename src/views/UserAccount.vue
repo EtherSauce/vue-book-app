@@ -1,36 +1,3 @@
-<template>
-  <main class="container my-4">
-    <h2>User Account</h2>
-
-    <ul class="nav nav-tabs mb-3">
-      <li class="nav-item" v-for="(t, i) in tabs" :key="t.key">
-        <button
-            class="nav-link"
-            :class="{ active: active === t.key }"
-            @click="active = t.key"
-        >{{ t.label }}</button>
-      </li>
-    </ul>
-
-    <div v-if="active === 'settings'">
-      <account-settings
-          :user="effectiveUser"
-          @update-user="onUpdateUser"
-      />
-    </div>
-
-    <div v-if="active === 'orders'">
-      <div v-if="loadingOrders" class="text-muted">Loading orders…</div>
-      <div v-else-if="loadError" class="text-danger">Error: {{ loadError }}</div>
-      <order-history v-else :orders="orders" />
-    </div>
-
-    <div v-if="active === 'wishlist'">
-      <wishlist :items="wishlist" @add-to-cart="$emit('add-to-cart', $event)" />
-    </div>
-  </main>
-</template>
-
 <script>
 import AccountSettings from '@/components/AccountSettings.vue';
 import OrderHistory from '@/components/OrderHistory.vue';
@@ -161,6 +128,39 @@ export default {
 };
 </script>
 
+<template>
+  <main class="container my-4">
+    <h2>User Account</h2>
+
+    <ul class="nav nav-tabs mb-3">
+      <li class="nav-item" v-for="(t, i) in tabs" :key="t.key">
+        <button
+            class="nav-link"
+            :class="{ active: active === t.key }"
+            @click="active = t.key"
+        >{{ t.label }}</button>
+      </li>
+    </ul>
+
+    <div v-if="active === 'settings'">
+      <account-settings
+          :user="effectiveUser"
+          @update-user="onUpdateUser"
+      />
+    </div>
+
+    <div v-if="active === 'orders'">
+      <div v-if="loadingOrders" class="text-muted">Loading orders…</div>
+      <div v-else-if="loadError" class="text-danger">Error: {{ loadError }}</div>
+      <order-history v-else :orders="orders" />
+    </div>
+
+    <div v-if="active === 'wishlist'">
+      <wishlist :items="wishlist" @add-to-cart="$emit('add-to-cart', $event)" />
+    </div>
+  </main>
+</template>
+
 <style scoped>
-/* Scoped styles for user account view */
+
 </style>

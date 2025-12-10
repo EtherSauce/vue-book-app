@@ -1,11 +1,9 @@
-<!-- vue -->
-<!-- File: `src/components/CheckoutForm.vue` -->
 <script>
 import AccordionSection from './AccordionSection.vue';
 import CartSummary from './CartSummary.vue';
 import OrderConfirmationModal from './OrderConfirmationModal.vue';
 import { auth } from '@/firebase/index.js';
-import createOrder from '@/utils/orders.js'; // helper created above
+import createOrder from '@/utils/orders.js';
 
 export default {
   name: "CheckoutForm",
@@ -142,7 +140,6 @@ export default {
       return true;
     },
 
-    // Single merged placeOrder method (fixed duplicate declaration)
     async placeOrder() {
       if (!this.validateForm()) {
         this.$nextTick(() => {
@@ -152,7 +149,6 @@ export default {
         return;
       }
 
-      // Build order payload
       const user = auth.currentUser;
       const items = (this.products || []).map(p => ({
         id: p.id,
@@ -166,6 +162,7 @@ export default {
 
       const orderPayload = {
         userId: user ? user.uid : null,
+        isGuest: !user,
         userEmail: user ? user.email : (this.localShippingEmail || null),
         shipping: {
           name: this.localShippingName,
@@ -181,22 +178,12 @@ export default {
         },
         items,
         total: Number(this.cartTotal) || 0
-        // status and createdAt handled in createOrder
       };
 
       try {
-        let orderNumber = null;
-
-        if (user) {
-          // record order for signed-in users
-          orderNumber = await createOrder(orderPayload);
-          this.$emit('order-placed', orderNumber);
-        } else {
-          // guests: do not write to DB, still allow confirmation
-          this.$emit('order-placed', null);
-        }
-
-        // show confirmation and clear cart via existing UI flow
+        // Always record the order (signed-in or guest). `createOrder` should handle guest userId/null.
+        const orderNumber = await createOrder(orderPayload);
+        this.$emit('order-placed', orderNumber || null);
         this.showConfirmation = true;
       } catch (e) {
         console.error('Failed to create order:', e);
@@ -208,11 +195,9 @@ export default {
       this.sectionOpen = this.sectionOpen.map((open, i) => i === idx ? !open : false);
     },
 
-    // Updated: close confirmation should clear local fields, emit empty-cart and navigate home
     closeConfirmation() {
       this.showConfirmation = false;
 
-      // clear local form state
       this.localShippingName = '';
       this.localShippingAddress = '';
       this.localShippingCity = '';
@@ -223,10 +208,8 @@ export default {
       this.localExpDate = '';
       this.localCvv = '';
 
-      // inform parent to clear cart
       this.$emit('empty-cart');
 
-      // navigate back to Home
       if (this.$router) {
         this.$router.push({ name: 'Home' });
       }
@@ -234,7 +217,6 @@ export default {
 
     updateParent(field, value) {
       this.$emit(`update:${field}`, value);
-      // remove the specific field warning as soon as the user types
       if (this.errors && this.errors[field]) {
         const { [field]: removed, ...rest } = this.errors;
         this.errors = rest;
@@ -252,7 +234,6 @@ export default {
       <form @submit.prevent="placeOrder" novalidate style="width:100%;">
         <div class="accordion mb-4 mx-auto" id="checkoutAccordion" style="max-width: 700px; width: 100%;">
 
-          <!-- SHIPPING SECTION -->
           <accordion-section title="Shipping Information" :isOpen="sectionOpen[0]" @toggle="toggleSection(0)">
             <div class="mb-3">
               <input type="text" class="form-control" :class="{'is-invalid': errors.shippingName}" placeholder="Name"
@@ -289,7 +270,6 @@ export default {
             </button>
           </accordion-section>
 
-          <!-- 🟢 PAYMENT SECTION -->
           <accordion-section title="Payment Information" :isOpen="sectionOpen[1]" @toggle="toggleSection(1)">
             <div class="mb-3">
               <input type="text" class="form-control" :class="{'is-invalid': errors.cardNumber}" placeholder="Card Number"
@@ -314,7 +294,6 @@ export default {
             </button>
           </accordion-section>
 
-          <!-- REVIEW SECTION -->
           <accordion-section title="Review & Place Order" :isOpen="sectionOpen[2]" @toggle="toggleSection(2)">
             <div>
               <strong>Shipping Address:</strong><br>
